@@ -1,0 +1,12 @@
+[project]
+name = "telegram-bot-pizza"
+version = "0.1.0"
+description = "Dodo Pizza telegram-bot"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.24.0",
+    "langchain>=1.2.9",
+    "langchain-community>=0.4.1",
+    "langchain-openai>=1.1.7",
+]
