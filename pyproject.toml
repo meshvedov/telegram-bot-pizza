@@ -9,4 +9,5 @@ dependencies = [
     "langchain>=1.2.9",
     "langchain-community>=0.4.1",
     "langchain-openai>=1.1.7",
+    "whisper>=1.1.10",
 ]
