@@ -1,7 +1,7 @@
 import os
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters import Command
-import whisper # Локальный STT
+# import whisper # Локальный STT
 
 # Твои импорты LangChain и Pydantic (OrderState, chain, retriever)
 # ...
@@ -15,6 +15,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
 
 import os
+import logging
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -39,15 +40,15 @@ system_prompt = (
     "- Если товара нет в меню, вежливо скажи об этом в message_to_user."
 )
 
-st.set_page_config(page_title="Pizza Order Bot", layout="centered")
-st.title("🍕 Пиццерия Qwen")
+# st.set_page_config(page_title="Pizza Order Bot", layout="centered")
+# st.title("🍕 Пиццерия Qwen")
 
 # 1. Инициализация состояния (выполняется один раз)
-if "current_cart" not in st.session_state:
-    st.session_state.current_cart = OrderState(items=[], total_price=0, message_to_user="Привет! Что желаете заказать?")
+# if "current_cart" not in st.session_state:
+#     st.session_state.current_cart = OrderState(items=[], total_price=0, message_to_user="Привет! Что желаете заказать?")
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# if "chat_history" not in st.session_state:
+#     st.session_state.chat_history = []
 
 # Подключение к Qwen (LM Studio)
 # llm = ChatOpenAI(base_url="http://localhost:1234/v1", api_key="lm-studio", model="qwen3-30b")
@@ -58,7 +59,7 @@ if not openai_api_key:
 embeddings = OpenAIEmbeddings(#api_key=SecretStr(openai_api_key), 
                               model='text-embedding-3-small', 
                               base_url="https://api.vsellm.ru/")
-db = FAISS.load_local("notebooks/dodo_faiss_index", embeddings, allow_dangerous_deserialization=True)
+db = FAISS.load_local("data/dodo_faiss_index", embeddings, allow_dangerous_deserialization=True)
 retriever = db.as_retriever()
 
 llm = ChatOpenAI(#api_key=SecretStr(openai_api_key), 
@@ -76,7 +77,7 @@ bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
 # Загружаем модель Whisper локально (она отлично работает на Arch)
-stt_model = whisper.load_model("base")
+# stt_model = whisper.load_model("base")
 
 # Словарь для хранения корзин пользователей (вместо st.session_state)
 user_carts = {}
@@ -112,7 +113,7 @@ async def process_order_logic(message: types.Message, user_text: str):
     user_id = message.from_user.id
     
     # Достаем или создаем корзину
-    current_cart = user_carts.get(user_id, OrderState(items=[], total_price=0))
+    current_cart = user_carts.get(user_id, OrderState(items=[], total_price=0, message_to_user="Привет! Что желаете заказать?"))
     
     # Твоя RAG логика
     context_docs = retriever.invoke(user_text)
@@ -141,4 +142,5 @@ async def process_order_logic(message: types.Message, user_text: str):
 
 if __name__ == "__main__":
     import asyncio
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(dp.start_polling(bot))
