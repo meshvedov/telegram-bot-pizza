@@ -1,5 +1,5 @@
 import os
-from aiogram import Router, F
+from aiogram import Router, F, types
 from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
 
@@ -28,6 +28,23 @@ user_carts = {}
 async def start_cmd(message: Message):
     user_carts[message.from_user.id] = OrderState(items=[], total_price=0, message_to_user="")
     await message.answer("Привет! Я бот-пиццерия. Можешь писать текстом или прислать голосовое!")
+    
+@router.message(F.text == "Оформить заказ")
+async def handle_order(message: Message):
+    # проверка наличия заказа
+    current_cart = user_carts.get(message.from_user.id)
+    if not current_cart or not current_cart.items:
+        await message.answer("Ваша корзина пуста. Пожалуйста, добавьте товары перед оформлением заказа.")
+        return
+    # всплывающее сообщение с подтверждением
+    await message.answer("Ваш заказ оформлен! Спасибо за покупку!")
+    # очищаем корзину
+    user_carts[message.from_user.id] = OrderState(items=[], total_price=0, message_to_user="")
+    
+@router.message(F.text == "Очистить корзину")
+async def handle_clear_cart(message: Message):
+    user_carts[message.from_user.id] = OrderState(items=[], total_price=0, message_to_user="Корзина очищена. Что желаете заказать?")
+    await message.answer("Корзина очищена. Что желаете заказать?") 
 
 # ОБРАБОТКА ГОЛОСА
 @router.message(F.voice)
@@ -52,7 +69,7 @@ async def handle_text(message: Message):
     await process_order_logic(message, message.text)
 
 async def process_order_logic(message: Message, user_text: str):
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     user_id = message.from_user.id
     
     # Достаем или создаем корзину
@@ -81,4 +98,11 @@ async def process_order_logic(message: Message, user_text: str):
         f"💰 **Итого: {new_state.total_price} ₽**"
     )
     
-    await message.answer(full_response, parse_mode="Markdown")
+    await message.answer(full_response, parse_mode="Markdown", reply_markup=create_reply_keyboard())
+    
+def create_reply_keyboard() -> types.ReplyKeyboardMarkup:
+    buttons = [
+        [types.KeyboardButton(text="Оформить заказ"), types.KeyboardButton(text="Очистить корзину")],
+    ]
+    return types.ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, is_persistent=True)
+    
