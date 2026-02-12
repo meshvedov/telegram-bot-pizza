@@ -1,28 +1,16 @@
 import os
-from aiogram import Router, F, types
+from dotenv import load_dotenv
+from aiogram import Router, F, types, Bot
 from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
 
-from app.generators import retriever, chain, OrderState
+from app.generators import retriever, chain, OrderState, stt_model
 
+load_dotenv()
 router = Router()
+bot = Bot(token=os.getenv("BOT_TOKEN"))
 
-#==============================
-# @router.message(CommandStart())
-# async def handle_start(message: Message):
-#     await message.answer(text=f"Привет! Я {message.from_user.full_name}")
-
-# @router.message(F.text)
-# async def echo_message(message: Message):
-#     # await bot.send_message(
-#     #     chat_id=message.chat.id,
-#     #     text='Wait a second...'
-#     # )
-#     await message.answer(text=message.text)
-#     await message.reply(text=message.text)
-#==============================
-
-user_carts = {}
+user_carts = {} # хранилище для заказов
 
 @router.message(Command("start"))
 async def start_cmd(message: Message):
@@ -49,6 +37,7 @@ async def handle_clear_cart(message: Message):
 # ОБРАБОТКА ГОЛОСА
 @router.message(F.voice)
 async def handle_voice(message: Message):
+    # import pdb; pdb.set_trace()
     # 1. Скачиваем файл
     file_id = message.voice.file_id
     file = await bot.get_file(file_id)
@@ -56,8 +45,12 @@ async def handle_voice(message: Message):
     await bot.download_file(file.file_path, file_path)
 
     # 2. Транскрибация (Whisper)
-    result = stt_model.transcribe(file_path)
-    user_text = result['text']
+    menu_context = "Пицца, Пепперони, Маргарита, сок Добрый, кола, газировка, четыре сыра, 25 см, 30 см."
+    result = stt_model.transcribe(file_path, language='ru', initial_prompt=menu_context)
+    # user_text = result['text']
+    segments, info = stt_model.transcribe(file_path, beam_size=5, initial_prompt=menu_context, language='ru')
+    user_text = "".join([segment.text for segment in segments])
+    print(user_text)
     os.remove(file_path) # Чистим за собой
 
     # 3. Отправляем в твою логику заказа

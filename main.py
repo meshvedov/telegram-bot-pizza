@@ -6,11 +6,9 @@ import os
 import asyncio
 import logging
 
-from app.handlers import router
+from app.handlers import router, bot
 
 async def main():
-    load_dotenv()
-    bot = Bot(token=os.getenv("BOT_TOKEN"))
     dp = Dispatcher()
     dp.include_router(router)
     logging.basicConfig(level=logging.INFO)

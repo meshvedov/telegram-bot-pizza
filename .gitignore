@@ -181,4 +181,6 @@ test/
 catboost_info/
 
 # UV
+uv.lock.ogg
+*.ogg
 uv.lock

@@ -8,6 +8,7 @@ from langchain_community.vectorstores import FAISS
 from typing import List 
 from pydantic import BaseModel, Field
 # import whisper # Локальный STT
+from faster_whisper import WhisperModel
 
 load_dotenv()
 
@@ -40,11 +41,21 @@ embeddings = OpenAIEmbeddings(#api_key=SecretStr(openai_api_key),
                               model='text-embedding-3-small', 
                               base_url="https://api.vsellm.ru/")
 db = FAISS.load_local("data/dodo_faiss_index", embeddings, allow_dangerous_deserialization=True)
+
 retriever = db.as_retriever()
 
-llm = ChatOpenAI(#api_key=SecretStr(openai_api_key), 
-                 model='gpt-4o-mini',
-                 base_url="https://api.vsellm.ru/")  
+llm = ChatOpenAI(
+    # model='deepseek-r1-distill-qwen-32b',
+    model='qwen3-coder-30b-a3b-instruct',
+    # model='deepseek-r1-distill-qwen-14b',
+    base_url="http://localhost:1234/v1",
+    api_key="not_needed",
+    temperature=0,
+    # max_tokens=512,
+)
+# llm = ChatOpenAI(#api_key=SecretStr(openai_api_key), 
+#                  model='gpt-4o-mini',
+#                  base_url="https://api.vsellm.ru/")  
 
 prompt = PromptTemplate(
     input_variables=["input", "context", "current_order", "chat_history"],
@@ -52,5 +63,6 @@ prompt = PromptTemplate(
 )
 chain = prompt | llm.with_structured_output(OrderState)
 
-# Загружаем модель Whisper локально (она отлично работает на Arch)
-# stt_model = whisper.load_model("base")
+# Загружаем модель Whisper локально
+# stt_model = whisper.load_model("small", device='cuda')
+stt_model = WhisperModel(model_size_or_path='base', device='cuda', compute_type='float16')
