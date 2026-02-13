@@ -3,12 +3,17 @@ from dotenv import load_dotenv
 from aiogram import Router, F, types, Bot
 from aiogram.types import Message
 from aiogram.filters import Command, CommandStart
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 from app.generators import retriever, chain, OrderState, stt_model
 
 load_dotenv()
 router = Router()
 bot = Bot(token=os.getenv("BOT_TOKEN"))
+
+class Gen(StatesGroup):
+    waiting_for_input = State()
 
 user_carts = {} # хранилище для заказов
 
@@ -33,11 +38,16 @@ async def handle_order(message: Message):
 async def handle_clear_cart(message: Message):
     user_carts[message.from_user.id] = OrderState(items=[], total_price=0, message_to_user="Корзина очищена. Что желаете заказать?")
     await message.answer("Корзина очищена. Что желаете заказать?") 
+    
+@router.message(Gen.waiting_for_input)
+async def stop_flood(message: Message):
+    await message.answer("Пожалуйста, подождите, я обрабатываю ваш предыдущий запрос.")
 
 # ОБРАБОТКА ГОЛОСА
 @router.message(F.voice)
-async def handle_voice(message: Message):
+async def handle_voice(message: Message, state: FSMContext):
     # import pdb; pdb.set_trace()
+    await state.set_state(Gen.waiting_for_input)
     # 1. Скачиваем файл
     file_id = message.voice.file_id
     file = await bot.get_file(file_id)
@@ -55,11 +65,14 @@ async def handle_voice(message: Message):
 
     # 3. Отправляем в твою логику заказа
     await process_order_logic(message, user_text)
+    await state.clear()
 
 # ОБРАБОТКА ТЕКСТА
 @router.message(F.text)
-async def handle_text(message: Message):
+async def handle_text(message: Message, state: FSMContext):
+    await state.set_state(Gen.waiting_for_input)
     await process_order_logic(message, message.text)
+    await state.clear()
 
 async def process_order_logic(message: Message, user_text: str):
     # import pdb; pdb.set_trace()
